@@ -92,11 +92,11 @@ jobs:
       - image: cimg/python:3.10
     parameters:
       cluster-name:
-        description: "sit"
+        description: "daticash-ph"
         type: string
     steps:
       - aws-eks/update-kubeconfig-with-authenticator:
-          cluster-name: "sit"
+          cluster-name: "daticash-ph"
           aws-region: "$REGION"
       - helm/install-helm-client:
           version: "v3.8.2"
@@ -191,7 +191,7 @@ workflows:
             - Helm
             - slack
       - upgrade-helm-chart:
-          cluster-name: sit
+          cluster-name: daticash-ph
           requires:
             - build-host-g2p-fyn-chart
           context:
