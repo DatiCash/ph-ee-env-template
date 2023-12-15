@@ -15,7 +15,7 @@ SPRING_PROFILES_ACTIVE: "bb,tenants"
 LOGGING_LEVEL_ROOT: "INFO"
 DFSPIDS: ""
 operations:
-  url: "http://ops-bk.sandbox.mifos.io/api/v1"
+  url: "http://ops-bk.sandbox.daticash.io/api/v1"
   authEnabled: false
 redis:
   host: "127.0.0.1"

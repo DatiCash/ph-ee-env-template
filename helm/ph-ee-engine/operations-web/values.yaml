@@ -8,8 +8,8 @@ enabled: true
 image: ""
 imageTag: ""
 SPRING_PROFILES_ACTIVE: "bb"
-hostname: "ops.sandbox.mifos.io"
-webhost: "ops.sandbox.mifos.io"
+hostname: "ops.sandbox.daticash.io"
+webhost: "ops.sandbox.daticash.io"
 limits:
   cpu: "500m"
   memory: "512M"
@@ -37,6 +37,6 @@ deployment:
 
 configmap:
   apiversion: "v1"
-  hostname: "ops.sandbox.mifos.io"
+  hostname: "ops.sandbox.daticash.io"
   identity:
-    hostname: "ops-bk.sandbox.mifos.io"
+    hostname: "ops-bk.sandbox.daticash.io"

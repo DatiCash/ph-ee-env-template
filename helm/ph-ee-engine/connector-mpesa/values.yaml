@@ -15,7 +15,7 @@ SPRING_PROFILES_ACTIVE: ""
 LOGGING_LEVEL_ROOT: "INFO"
 zeebe_init_transfer_wait_timer: 10
 tenant: "lion"
-callback_host: "https://mpesa.sandbox.mifos.io/"
+callback_host: "https://mpesa.sandbox.daticash.io/"
 retry_count: 3
 api_timeout: 60000
 channel:
