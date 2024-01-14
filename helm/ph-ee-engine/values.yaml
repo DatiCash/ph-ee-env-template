@@ -11,9 +11,12 @@ secret:
   apiversion: "v1"
 
 configmap:
-  apiversion: "v1"  
+  apiversion: "v1"
 
 global:
+  bucket_name: paymenthub-ee
+  region: "ap-south-1"
+  s3BaseUrl: "http://minio:9000"
   SPRING_PROFILES_ACTIVE: "bb"
   imagePullPolicy: "Always"
   LOGGING_LEVEL_ROOT: "INFO"
@@ -54,33 +57,36 @@ camunda-platform:
       - name: ZEEBE_BROKER_BACKPRESSURE_VEGAS_BETA
         value: "8"
       - name: ZEEBE_BROKER_EXPORTERS_KAFKA_ARGS_INDEX_EVENT
-        value: 'true'
+        value: "true"
       - name: ZEEBE_BROKER_EXPORTERS_KAFKA_ARGS_INDEX_VARIABLE
-        value: 'true'
+        value: "true"
       - name: ZEEBE_BROKER_EXPORTERS_KAFKA_ARGS_INDEX_PROCESSINSTANCE
-        value: 'true'
+        value: "true"
       - name: ZEEBE_BROKER_EXPORTERS_KAFKA_ARGS_INDEX_PROCESS
-        value: 'true'
+        value: "true"
       - name: ZEEBE_BROKER_EXPORTERS_KAFKA_ARGS_INDEX_INCIDENT
-        value: 'true'
+        value: "true"
       - name: ZEEBE_BROKER_EXPORTERS_KAFKA_ARGS_INDEX_DEPLOYMENT
-        value: 'false'
+        value: "false"
       - name: ZEEBE_BROKER_EXPORTERS_KAFKA_ARGS_INDEX_ERROR
-        value: 'false'
+        value: "false"
       - name: ZEEBE_BROKER_EXPORTERS_KAFKA_ARGS_INDEX_JOB
-        value: 'false'
+        value: "false"
       - name: ZEEBE_BROKER_EXPORTERS_KAFKA_ARGS_INDEX_VARIABLEDOCUMENT
-        value: 'false'
+        value: "false"
       - name: ZEEBE_BROKER_EXPORTERS_KAFKA_ARGS_INDEX_WORKFLOWINSTANCE
-        value: 'false'
+        value: "false"
       - name: ZEEBE_BROKER_EXPORTERS_KAFKA_ARGS_INDEX_CREATETEMPLATE
-        value: 'false'
+        value: "false"
 
     extraInitContainers:
       - name: init-ph-ee-kafka-exporter
         image: busybox:1.28
-        command: ['/bin/sh', '-c']
-        args: ['wget -O /exporters/ph-ee-kafka-exporter.jar "https://fynarfin.io/images/exporter-1.1.1-SNAPSHOT.jar"; ls -al /exporters/']
+        command: ["/bin/sh", "-c"]
+        args:
+          [
+            'wget -O /exporters/ph-ee-kafka-exporter.jar "https://fynarfin.io/images/exporter-1.1.1-SNAPSHOT.jar"; ls -al /exporters/',
+          ]
         volumeMounts:
           - name: exporters
             mountPath: /exporters/
@@ -89,7 +95,7 @@ camunda-platform:
 
     image:
       repository: camunda/zeebe
-      tag: 8.1.1
+      tag: 8.2.8
     clusterSize: "1"
     partitionCount: "1"
     replicationFactor: "1"
@@ -129,7 +135,7 @@ camunda-platform:
 
 elasticsearch:
   enabled: true
-#  imageTag: 7.17.0
+  # imageTag: 7.17.1
   replicas: 1
   protocol: http
   fullnameOverride: "ph-ee-elasticsearch"
@@ -156,7 +162,6 @@ elasticsearch:
           name: elastic-credentials
           key: password
 
-
 kibana:
   enabled: true
   imageTag: 7.16.3
@@ -180,27 +185,26 @@ kibana:
       secretName: elastic-certificate-pem
       path: /usr/share/kibana/config/certs
   extraEnvs:
-    - name: 'ELASTICSEARCH_USERNAME'
+    - name: "ELASTICSEARCH_USERNAME"
       valueFrom:
         secretKeyRef:
           name: elastic-credentials
           key: username
-    - name: 'ELASTICSEARCH_PASSWORD'
+    - name: "ELASTICSEARCH_PASSWORD"
       valueFrom:
         secretKeyRef:
           name: elastic-credentials
           key: password
-    - name: 'KIBANA_ENCRYPTION_KEY'
+    - name: "KIBANA_ENCRYPTION_KEY"
       valueFrom:
         secretKeyRef:
           name: kibana
           key: encryptionkey
 
-
 channel:
   enabled: false
   replicas: 1
-  image: docker.io/openmf/ph-ee-connector-channel:v1.5.0
+  image: docker.io/openmf/ph-ee-connector-channel:v1.9.0
   imagePullPolicy: "Always"
   TRANSACTION_ID_LENGTH: 20
   gsma_payee_tenant: ""
@@ -227,11 +231,11 @@ channel:
     httpGet:
       path: /actuator/health/liveness
       port: 8443
-      scheme: HTTPS 
+      scheme: HTTPS
     initialDelaySeconds: 120
     periodSeconds: 30
     failureThreshold: 3
-    timeoutSeconds: 5 
+    timeoutSeconds: 5
   readinessProbe:
     httpGet:
       path: /actuator/health/readiness
@@ -241,22 +245,22 @@ channel:
     periodSeconds: 30
     failureThreshold: 3
     timeoutSeconds: 5
-# Whether this chart should self-manage its service account, role, and associated role binding.
-  managedServiceAccount: true 
-# Custom service account override that the pod will use
-  serviceAccount: "channel" 
-# Annotations to add to the ServiceAccount that is created if the serviceAccount value isn't set.
-  serviceAccountAnnotations: {} 
-# How long to wait for channel pods to stop gracefully
-  terminationGracePeriod: 30 
-# Extra environment variables for channel container.
-  envFrom: [] 
+  # Whether this chart should self-manage its service account, role, and associated role binding.
+  managedServiceAccount: true
+  # Custom service account override that the pod will use
+  serviceAccount: "channel"
+  # Annotations to add to the ServiceAccount that is created if the serviceAccount value isn't set.
+  serviceAccountAnnotations: {}
+  # How long to wait for channel pods to stop gracefully
+  terminationGracePeriod: 30
+  # Extra environment variables for channel container.
+  envFrom: []
   # - configMapRef:
   #     name: config-secret
   extraEnvs: []
-# This is the PriorityClass settings as defined in
-# https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass  
-  priorityClassName: "" 
+  # This is the PriorityClass settings as defined in
+  # https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass
+  priorityClassName: ""
   # ph-ee-connector-channelConfig: ""
   #   ph-ee-connector-channel: |
   # - User that the container will execute as.
@@ -265,15 +269,17 @@ channel:
   securityContext:
     runAsUser: 0
     privileged: false
-  resources:    
+  resources:
     limits:
       memory: "512M"
       cpu: "500m"
     requests:
       memory: "512M"
-      cpu: "100m"       
-# Enabling this will publicly expose your channel instance.
-# Only enable this if you have security enabled on your cluster    
+      cpu: "100m"
+  service:
+    annotations: {}
+  # Enabling this will publicly expose your channel instance.
+  # Only enable this if you have security enabled on your cluster
   ingress:
     enabled: true
     path: "/channel"
@@ -286,16 +292,16 @@ channel:
     nodeSelector: {}
     tolerations: []
     envFrom: []
-  # - configMapRef:
-  #     name: config-secret
+    # - configMapRef:
+    #     name: config-secret
     extraEnvs: []
-  # - User that the container will execute as.
-  # Not necessary to run as root (0) as the channel Deployment use cases do not need access to Kubernetes Node internals
-  # - Typically not necessarily unless running within environments such as OpenShift.
+    # - User that the container will execute as.
+    # Not necessary to run as root (0) as the channel Deployment use cases do not need access to Kubernetes Node internals
+    # - Typically not necessarily unless running within environments such as OpenShift.
     securityContext:
       runAsUser: 0
       privileged: false
-    resources:    
+    resources:
       limits:
         memory: "512M"
         cpu: "500m"
@@ -303,9 +309,9 @@ channel:
         memory: "512M"
         cpu: "100m"
 # Allows you to add any config files in /usr/share/
-    # such as ph-ee-connector-channel.yml for deployment  
-    # ph-ee-connector-channelConfig: {}
-    #   ph-ee-connector-channel.yml: |        
+# such as ph-ee-connector-channel.yml for deployment
+# ph-ee-connector-channelConfig: {}
+#   ph-ee-connector-channel.yml: |
 
 operations:
   enabled: true
@@ -346,22 +352,22 @@ ph_ee_connector_ams_mifos:
   ams_local_auth_host: "fineract-server"
   ams_local_tenants: ""
   ams_local_loan_host: ""
-# Whether this chart should self-manage its service account, role, and associated role binding.
-  managedServiceAccount: true 
-# Custom service account override that the pod will use
-  serviceAccount: "" 
-# Annotations to add to the ServiceAccount that is created if the serviceAccount value isn't set.
-  serviceAccountAnnotations: {} 
-# How long to wait for ams-mifos pods to stop gracefully
-  terminationGracePeriod: 30 
-# Extra environment variables for ams-mifos container.
-  envFrom: [] 
+  # Whether this chart should self-manage its service account, role, and associated role binding.
+  managedServiceAccount: true
+  # Custom service account override that the pod will use
+  serviceAccount: ""
+  # Annotations to add to the ServiceAccount that is created if the serviceAccount value isn't set.
+  serviceAccountAnnotations: {}
+  # How long to wait for ams-mifos pods to stop gracefully
+  terminationGracePeriod: 180
+  # Extra environment variables for ams-mifos container.
+  envFrom: []
   # - configMapRef:
   #     name: config-secret
   extraEnvs: []
-# This is the PriorityClass settings as defined in
-# https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass  
-  priorityClassName: "" 
+  # This is the PriorityClass settings as defined in
+  # https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass
+  priorityClassName: ""
   # ph-ee-connector-ams-mifosConfig: ""
   #   ph-ee-connector-ams-mifos.yml: |
   # - User that the container will execute as.
@@ -370,50 +376,50 @@ ph_ee_connector_ams_mifos:
   securityContext:
     runAsUser: 0
     privileged: false
-  resources:    
+  resources:
     limits:
       memory: "2048M"
       cpu: "500m"
     requests:
       memory: "1024M"
       cpu: "300m"
-# Enabling this will publicly expose your ams-mifos instance.
-# Only enable this if you have security enabled on your cluster    
+  # Enabling this will publicly expose your ams-mifos instance.
+  # Only enable this if you have security enabled on your cluster
   ingress:
-    enabled: false 
+    enabled: false
     annotations: {}
-      
+
   deployment:
     annotations: {}
     affinity: {}
     nodeSelector: {}
     tolerations: []
     envFrom: []
-  # - configMapRef:
-  #     name: config-secret
+    # - configMapRef:
+    #     name: config-secret
     extraEnvs: []
-  # - User that the container will execute as.
-  # Not necessary to run as root (0) as the zeebeops Deployment use cases do not need access to Kubernetes Node internals
-  # - Typically not necessarily unless running within environments such as OpenShift.
+    # - User that the container will execute as.
+    # Not necessary to run as root (0) as the zeebeops Deployment use cases do not need access to Kubernetes Node internals
+    # - Typically not necessarily unless running within environments such as OpenShift.
     securityContext:
       runAsUser: 0
       privileged: false
-    resources:    
+    resources:
       limits:
         memory: "512M"
         cpu: "500m"
       requests:
         memory: "512M"
-        cpu: "100m"    
+        cpu: "100m"
 # Allows you to add any config files in /usr/share/
-    # such as ph-ee-connector-ams-mifos.yml for deployment  
-    # ph-ee-connector-ams-mifosConfig: {}
-    #   ph-ee-connector-ams-mifos.yml: | 
+# such as ph-ee-connector-ams-mifos.yml for deployment
+# ph-ee-connector-ams-mifosConfig: {}
+#   ph-ee-connector-ams-mifos.yml: |
 
 ph_ee_connector_mojaloop:
   enabled: false
   replicas: 1
-  image: docker.io/openmf/ph-ee-connector-mojaloop:v1.2.0
+  image: docker.io/openmf/ph-ee-connector-mojaloop:v1.3.0
   imagePullPolicy: "Always"
   hostname: ""
   switch:
@@ -438,7 +444,7 @@ ph_ee_connector_mojaloop:
     initialDelaySeconds: 120
     periodSeconds: 30
     failureThreshold: 3
-    timeoutSeconds: 5 
+    timeoutSeconds: 5
   readinessProbe:
     httpGet:
       path: /actuator/health/readiness
@@ -447,22 +453,22 @@ ph_ee_connector_mojaloop:
     periodSeconds: 30
     failureThreshold: 3
     timeoutSeconds: 5
-# Whether this chart should self-manage its service account, role, and associated role binding.
-  managedServiceAccount: true 
-# Custom service account override that the pod will use
-  serviceAccount: "" 
-# Annotations to add to the ServiceAccount that is created if the serviceAccount value isn't set.
-  serviceAccountAnnotations: {} 
-# How long to wait for mojaloop pods to stop gracefully
-  terminationGracePeriod: 30 
-# Extra environment variables for mojaloop container.
-  envFrom: [] 
+  # Whether this chart should self-manage its service account, role, and associated role binding.
+  managedServiceAccount: true
+  # Custom service account override that the pod will use
+  serviceAccount: ""
+  # Annotations to add to the ServiceAccount that is created if the serviceAccount value isn't set.
+  serviceAccountAnnotations: {}
+  # How long to wait for mojaloop pods to stop gracefully
+  terminationGracePeriod: 30
+  # Extra environment variables for mojaloop container.
+  envFrom: []
   # - configMapRef:
   #     name: config-secret
   extraEnvs: []
-# This is the PriorityClass settings as defined in
-# https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass  
-  priorityClassName: "" 
+  # This is the PriorityClass settings as defined in
+  # https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass
+  priorityClassName: ""
   # ph-ee-connector-mojaloop-javaConfig: ""
   #   ph-ee-connector-mojaloop-java.yml: |
   # - User that the container will execute as.
@@ -471,15 +477,15 @@ ph_ee_connector_mojaloop:
   securityContext:
     runAsUser: 0
     privileged: false
-  resources:    
+  resources:
     limits:
       memory: "512M"
       cpu: "500m"
     requests:
       memory: "512M"
-      cpu: "100m"           
-# Enabling this will publicly expose your mojaloop instance.
-# Only enable this if you have security enabled on your cluster    
+      cpu: "100m"
+  # Enabling this will publicly expose your mojaloop instance.
+  # Only enable this if you have security enabled on your cluster
   ingress:
     enabled: true
     path: "/"
@@ -491,39 +497,39 @@ ph_ee_connector_mojaloop:
     nodeSelector: {}
     tolerations: []
     envFrom: []
-  # - configMapRef:
-  #     name: config-secret
+    # - configMapRef:
+    #     name: config-secret
     extraEnvs: []
-  # - User that the container will execute as.
-  # Not necessary to run as root (0) as the mojaloop Deployment use cases do not need access to Kubernetes Node internals
-  # - Typically not necessarily unless running within environments such as OpenShift.
+    # - User that the container will execute as.
+    # Not necessary to run as root (0) as the mojaloop Deployment use cases do not need access to Kubernetes Node internals
+    # - Typically not necessarily unless running within environments such as OpenShift.
     securityContext:
       runAsUser: 0
       privileged: false
-    resources:    
+    resources:
       limits:
         memory: "512M"
         cpu: "500m"
       requests:
         memory: "512M"
-        cpu: "100m"    
+        cpu: "100m"
 # Allows you to add any config files in /usr/share/
-    # such as ph-ee-connector-mojaloop-java.yml for deployment  
-    # ph-ee-connector-mojaloop-javaConfig: {}
-    #   ph-ee-connector-mojaloop-java.yml: |
+# such as ph-ee-connector-mojaloop-java.yml for deployment
+# ph-ee-connector-mojaloop-javaConfig: {}
+#   ph-ee-connector-mojaloop-java.yml: |
 
 operations_app:
   enabled: true
   replicas: 1
-  image: docker.io/openmf/ph-ee-operations-app:v1.5.0
+  image: docker.io/openmf/ph-ee-operations-app:v1.10.0
   imagePullPolicy: "Always"
   token_client_channel_secret: ""
   datasource:
-      username: "mifos"
-      password: "password"
-      host: "operationsmysql"
-      port: 3306
-      schema: "tenants"
+    username: "mifos"
+    password: "password"
+    host: "operationsmysql"
+    port: 3306
+    schema: "tenants"
   livenessProbe:
     httpGet:
       path: /actuator/health/liveness
@@ -531,7 +537,7 @@ operations_app:
     initialDelaySeconds: 120
     periodSeconds: 30
     failureThreshold: 3
-    timeoutSeconds: 5 
+    timeoutSeconds: 5
   readinessProbe:
     httpGet:
       path: /actuator/health/readiness
@@ -540,39 +546,39 @@ operations_app:
     periodSeconds: 30
     failureThreshold: 3
     timeoutSeconds: 5
-# Whether this chart should self-manage its service account, role, and associated role binding.
-  managedServiceAccount: true 
-# Custom service account override that the pod will use
-  serviceAccount: "" 
-# Annotations to add to the ServiceAccount that is created if the serviceAccount value isn't set.
-  serviceAccountAnnotations: {} 
-# How long to wait for operations_app pods to stop gracefully
-  terminationGracePeriod: 30 
-# Extra environment variables for operations_app container.
-  envFrom: [] 
+  # Whether this chart should self-manage its service account, role, and associated role binding.
+  managedServiceAccount: true
+  # Custom service account override that the pod will use
+  serviceAccount: ""
+  # Annotations to add to the ServiceAccount that is created if the serviceAccount value isn't set.
+  serviceAccountAnnotations: {}
+  # How long to wait for operations_app pods to stop gracefully
+  terminationGracePeriod: 30
+  # Extra environment variables for operations_app container.
+  envFrom: []
   # - configMapRef:
   #     name: config-secret
   extraEnvs: []
-# This is the PriorityClass settings as defined in
-# https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass  
-  priorityClassName: "" 
-# operations_appConfig: ""
-#   operations_app.yml: |
-# - User that the container will execute as.
-# Not necessary to run as root (0) as the operations_app Deployment use cases do not need access to Kubernetes Node internals
-# - Typically not necessarily unless running within environments such as OpenShift.
+  # This is the PriorityClass settings as defined in
+  # https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass
+  priorityClassName: ""
+  # operations_appConfig: ""
+  #   operations_app.yml: |
+  # - User that the container will execute as.
+  # Not necessary to run as root (0) as the operations_app Deployment use cases do not need access to Kubernetes Node internals
+  # - Typically not necessarily unless running within environments such as OpenShift.
   securityContext:
     runAsUser: 0
     privileged: false
-  resources:    
+  resources:
     limits:
       memory: "512M"
       cpu: "500m"
     requests:
       memory: "512M"
-      cpu: "100m"         
-# Enabling this will publicly expose your operations_app instance.
-# Only enable this if you have security enabled on your cluster       
+      cpu: "100m"
+  # Enabling this will publicly expose your operations_app instance.
+  # Only enable this if you have security enabled on your cluster
   ingress:
     enabled: false
     path: "/opsapp"
@@ -584,29 +590,29 @@ operations_app:
     nodeSelector: {}
     tolerations: []
     envFrom: []
-  # - configMapRef:
-  #     name: config-secret
+    # - configMapRef:
+    #     name: config-secret
     extraEnvs: []
-# - User that the container will execute as.
-# Not necessary to run as root (0) as the operations_app Deployment use cases do not need access to Kubernetes Node internals
-# - Typically not necessarily unless running within environments such as OpenShift.
+    # - User that the container will execute as.
+    # Not necessary to run as root (0) as the operations_app Deployment use cases do not need access to Kubernetes Node internals
+    # - Typically not necessarily unless running within environments such as OpenShift.
     securityContext:
       runAsUser: 0
       privileged: false
-    resources:    
+    resources:
       limits:
         memory: "512M"
         cpu: "500m"
       requests:
         memory: "512M"
-        cpu: "100m"    
+        cpu: "100m"
 # Allows you to add any config files in /usr/share/
-    # such as operations_app.yml for deployment
+# such as operations_app.yml for deployment
 
 operations_web:
   enabled: true
   replicas: 1
-  image: docker.io/openmf/ph-ee-operations-web:v1.3.1
+  image: docker.io/openmf/ph-ee-operations-web:v1.10.0
   imagePullPolicy: "Always"
   imagePullSecrets: []
   webhost: ""
@@ -617,7 +623,7 @@ operations_web:
     initialDelaySeconds: 120
     periodSeconds: 30
     failureThreshold: 3
-    timeoutSeconds: 5 
+    timeoutSeconds: 5
   readinessProbe:
     httpGet:
       path: /actuator/health/readiness
@@ -626,43 +632,43 @@ operations_web:
     periodSeconds: 30
     failureThreshold: 3
     timeoutSeconds: 5
-# Whether this chart should self-manage its service account, role, and associated role binding.
-  managedServiceAccount: true 
-# Custom service account override that the pod will use
-  serviceAccount: "" 
-# Annotations to add to the ServiceAccount that is created if the serviceAccount value isn't set.
-  serviceAccountAnnotations: {} 
-# How long to wait for operations_web pods to stop gracefully
-  terminationGracePeriod: 30 
-# Extra environment variables for operations_web container.
-  envFrom: [] 
+  # Whether this chart should self-manage its service account, role, and associated role binding.
+  managedServiceAccount: true
+  # Custom service account override that the pod will use
+  serviceAccount: ""
+  # Annotations to add to the ServiceAccount that is created if the serviceAccount value isn't set.
+  serviceAccountAnnotations: {}
+  # How long to wait for operations_web pods to stop gracefully
+  terminationGracePeriod: 30
+  # Extra environment variables for operations_web container.
+  envFrom: []
   # - configMapRef:
   #     name: config-secret
   extraEnvs: []
-# This is the PriorityClass settings as defined in
-# https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass  
-  priorityClassName: "" 
-# ph-ee-operations-web-configConfig: ""
-#   ph-ee-operations-web-config.yml: |
-# - User that the container will execute as.
-# Not necessary to run as root (0) as the operations_web Deployment use cases do not need access to Kubernetes Node internals
-# - Typically not necessarily unless running within environments such as OpenShift.
+  # This is the PriorityClass settings as defined in
+  # https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass
+  priorityClassName: ""
+  # ph-ee-operations-web-configConfig: ""
+  #   ph-ee-operations-web-config.yml: |
+  # - User that the container will execute as.
+  # Not necessary to run as root (0) as the operations_web Deployment use cases do not need access to Kubernetes Node internals
+  # - Typically not necessarily unless running within environments such as OpenShift.
   securityContext:
     runAsUser: 0
     privileged: false
-  resources:    
+  resources:
     limits:
       memory: "512M"
       cpu: "500m"
     requests:
       memory: "512M"
-      cpu: "100m"       
-# Enabling this will publicly expose your operations_web instance.
-# Only enable this if you have security enabled on your cluster      
+      cpu: "100m"
+  # Enabling this will publicly expose your operations_web instance.
+  # Only enable this if you have security enabled on your cluster
   ingress:
     enabled: false
     path: "/"
-    annotations: {}    
+    annotations: {}
     backend: {}
   deployment:
     config:
@@ -674,34 +680,34 @@ operations_web:
     nodeSelector: {}
     tolerations: []
     envFrom: []
-  # - configMapRef:
-  #     name: config-secret
+    # - configMapRef:
+    #     name: config-secret
     extraEnvs: []
-# - User that the container will execute as.
-# Not necessary to run as root (0) as the operation-web Deployment use cases do not need access to Kubernetes Node internals
-# - Typically not necessarily unless running within environments such as OpenShift.
+    # - User that the container will execute as.
+    # Not necessary to run as root (0) as the operation-web Deployment use cases do not need access to Kubernetes Node internals
+    # - Typically not necessarily unless running within environments such as OpenShift.
     securityContext:
       runAsUser: 0
       privileged: false
-    resources:    
+    resources:
       limits:
         memory: "512M"
         cpu: "500m"
       requests:
         memory: "512M"
-        cpu: "100m"    
+        cpu: "100m"
 # Allows you to add any config files in /usr/share/
-    # such as ph-ee-operations-web.yml for deployment
-    # ph-ee-operations-webConfig: {}
-    #   ph-ee-operations-web.yml: |          
+# such as ph-ee-operations-web.yml for deployment
+# ph-ee-operations-webConfig: {}
+#   ph-ee-operations-web.yml: |
 
 identity:
 
 mpesa:
   enabled: false
   replicas: 1
-  image: "419830066942.dkr.ecr.ap-south-1.amazonaws.com/ph-mpesa"
-  imageTag: "v1.4.1"
+  image: "docker.io/openmf/ph-ee-connector-mpesa"
+  imageTag: "v1.6.0"
   zeebe_init_transfer_wait_timer: 10
   tenant: ""
   serviceAccountName: ""
@@ -740,7 +746,7 @@ mpesa:
       client_key: "0pLxbN83FrOl5Nd0Fh9Zi5BQlMxSL2n5"
       client_secret: "YzuGNoJxeub8ZC6d"
       pass_key: "bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919"
-  
+
   paybill:
     accountHoldingInstitutionId: "default"
     paygops:
@@ -756,7 +762,7 @@ mpesa:
     initialDelaySeconds: 120
     periodSeconds: 30
     failureThreshold: 3
-    timeoutSeconds: 5 
+    timeoutSeconds: 5
   readinessProbe:
     httpGet:
       path: /actuator/health/readiness
@@ -765,22 +771,22 @@ mpesa:
     periodSeconds: 30
     failureThreshold: 3
     timeoutSeconds: 5
-# Whether this chart should self-manage its service account, role, and associated role binding.
-  managedServiceAccount: true 
-# Custom service account override that the pod will use
-  serviceAccount: "" 
-# Annotations to add to the ServiceAccount that is created if the serviceAccount value isn't set.
-  serviceAccountAnnotations: {} 
-# How long to wait for mpesa pods to stop gracefully
-  terminationGracePeriod: 30 
-# Extra environment variables for mpesa container.
-  envFrom: [] 
+  # Whether this chart should self-manage its service account, role, and associated role binding.
+  managedServiceAccount: true
+  # Custom service account override that the pod will use
+  serviceAccount: ""
+  # Annotations to add to the ServiceAccount that is created if the serviceAccount value isn't set.
+  serviceAccountAnnotations: {}
+  # How long to wait for mpesa pods to stop gracefully
+  terminationGracePeriod: 30
+  # Extra environment variables for mpesa container.
+  envFrom: []
   # - configMapRef:
   #     name: config-secret
   extraEnvs: []
-# This is the PriorityClass settings as defined in
-# https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass  
-  priorityClassName: "" 
+  # This is the PriorityClass settings as defined in
+  # https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass
+  priorityClassName: ""
   # ph-ee-connector-mpesaConfig: ""
   #   ph-ee-connector-mpesa.yml: |
   # - User that the container will execute as.
@@ -789,15 +795,15 @@ mpesa:
   securityContext:
     runAsUser: 0
     privileged: false
-  resources:    
+  resources:
     limits:
       memory: "512M"
       cpu: "500m"
     requests:
       memory: "512M"
-      cpu: "100m"       
-# Enabling this will publicly expose your mpesa instance.
-# Only enable this if you have security enabled on your cluster    
+      cpu: "100m"
+  # Enabling this will publicly expose your mpesa instance.
+  # Only enable this if you have security enabled on your cluster
   ingress:
     enabled: false
     path: "/mpesa"
@@ -809,32 +815,32 @@ mpesa:
     nodeSelector: {}
     tolerations: []
     envFrom: []
-  # - configMapRef:
-  #     name: config-secret
+    # - configMapRef:
+    #     name: config-secret
     extraEnvs: []
-  # - User that the container will execute as.
-  # Not necessary to run as root (0) as the mpesa Deployment use cases do not need access to Kubernetes Node internals
-  # - Typically not necessarily unless running within environments such as OpenShift.
+    # - User that the container will execute as.
+    # Not necessary to run as root (0) as the mpesa Deployment use cases do not need access to Kubernetes Node internals
+    # - Typically not necessarily unless running within environments such as OpenShift.
     securityContext:
       runAsUser: 0
       privileged: false
-    resources:    
+    resources:
       limits:
         memory: "512M"
         cpu: "500m"
       requests:
         memory: "512M"
-        cpu: "100m"    
+        cpu: "100m"
 # Allows you to add any config files in /usr/share/
-    # such as ph-ee-connector-mpesa.yml for deployment  
-    # ph-ee-connector-mpesaConfig: {}
-    #   ph-ee-connector-mpesa.yml: |
+# such as ph-ee-connector-mpesa.yml for deployment
+# ph-ee-connector-mpesaConfig: {}
+#   ph-ee-connector-mpesa.yml: |
 
 roster_connector:
   enabled: false
   replicas: 1
   image: "419830066942.dkr.ecr.ap-south-1.amazonaws.com/phee-roster"
-  imageTag: "v1.2.0"
+  imageTag: "v1.3.1"
   containerPort: 5000
   ams:
     local:
@@ -848,7 +854,7 @@ roster_connector:
     initialDelaySeconds: 120
     periodSeconds: 30
     failureThreshold: 3
-    timeoutSeconds: 5 
+    timeoutSeconds: 5
   readinessProbe:
     httpGet:
       path: /actuator/health/readiness
@@ -857,22 +863,22 @@ roster_connector:
     periodSeconds: 30
     failureThreshold: 3
     timeoutSeconds: 5
-# Whether this chart should self-manage its service account, role, and associated role binding.
-  managedServiceAccount: true 
-# Custom service account override that the pod will use
-  serviceAccount: "" 
-# Annotations to add to the ServiceAccount that is created if the serviceAccount value isn't set.
-  serviceAccountAnnotations: {} 
-# How long to wait for roster_connector pods to stop gracefully
-  terminationGracePeriod: 30 
-# Extra environment variables for roster_connector container.
-  envFrom: [] 
+  # Whether this chart should self-manage its service account, role, and associated role binding.
+  managedServiceAccount: true
+  # Custom service account override that the pod will use
+  serviceAccount: ""
+  # Annotations to add to the ServiceAccount that is created if the serviceAccount value isn't set.
+  serviceAccountAnnotations: {}
+  # How long to wait for roster_connector pods to stop gracefully
+  terminationGracePeriod: 30
+  # Extra environment variables for roster_connector container.
+  envFrom: []
   # - configMapRef:
   #     name: config-secret
   extraEnvs: []
-# This is the PriorityClass settings as defined in
-# https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass  
-  priorityClassName: "" 
+  # This is the PriorityClass settings as defined in
+  # https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass
+  priorityClassName: ""
   # ph-ee-connector-ams-rosterConfig: ""
   #   ph-ee-connector-ams-roster.yml: |
   # - User that the container will execute as.
@@ -881,45 +887,45 @@ roster_connector:
   securityContext:
     runAsUser: 0
     privileged: false
-  resources:    
+  resources:
     limits:
       memory: "512M"
       cpu: "500m"
     requests:
       memory: "512M"
-      cpu: "100m"        
+      cpu: "100m"
   deployment:
     annotations: {}
     affinity: {}
     nodeSelector: {}
     tolerations: []
     envFrom: []
-  # - configMapRef:
-  #     name: config-secret
+    # - configMapRef:
+    #     name: config-secret
     extraEnvs: []
-  # - User that the container will execute as.
-  # Not necessary to run as root (0) as the roster_connector Deployment use cases do not need access to Kubernetes Node internals
-  # - Typically not necessarily unless running within environments such as OpenShift.
+    # - User that the container will execute as.
+    # Not necessary to run as root (0) as the roster_connector Deployment use cases do not need access to Kubernetes Node internals
+    # - Typically not necessarily unless running within environments such as OpenShift.
     securityContext:
       runAsUser: 0
       privileged: false
-    resources:    
+    resources:
       limits:
         memory: "512M"
         cpu: "500m"
       requests:
         memory: "512M"
-        cpu: "100m"    
+        cpu: "100m"
 # Allows you to add any config files in /usr/share/
-    # such as ph-ee-connector-ams-roster.yml for deployment  
-    # ph-ee-connector-ams-rosterConfig: {}
-    #   ph-ee-connector-ams-roster.yml: |
-  
+# such as ph-ee-connector-ams-roster.yml for deployment
+# ph-ee-connector-ams-rosterConfig: {}
+#   ph-ee-connector-ams-roster.yml: |
+
 paygops_connector:
   enabled: false
   replicas: 1
   image: "419830066942.dkr.ecr.ap-south-1.amazonaws.com/phee-connector-ams-paygops"
-  imageTag: "v1.5.0"
+  imageTag: "v1.6.1"
   containerPort: 5000
   ams:
     local:
@@ -933,7 +939,7 @@ paygops_connector:
     initialDelaySeconds: 120
     periodSeconds: 30
     failureThreshold: 3
-    timeoutSeconds: 5 
+    timeoutSeconds: 5
   readinessProbe:
     httpGet:
       path: /actuator/health/readiness
@@ -942,22 +948,22 @@ paygops_connector:
     periodSeconds: 30
     failureThreshold: 3
     timeoutSeconds: 5
-# Whether this chart should self-manage its service account, role, and associated role binding.
-  managedServiceAccount: true 
-# Custom service account override that the pod will use
-  serviceAccount: "" 
-# Annotations to add to the ServiceAccount that is created if the serviceAccount value isn't set.
-  serviceAccountAnnotations: {} 
-# How long to wait for paygops pods to stop gracefully
-  terminationGracePeriod: 30 
-# Extra environment variables for paygops container.
-  envFrom: [] 
+  # Whether this chart should self-manage its service account, role, and associated role binding.
+  managedServiceAccount: true
+  # Custom service account override that the pod will use
+  serviceAccount: ""
+  # Annotations to add to the ServiceAccount that is created if the serviceAccount value isn't set.
+  serviceAccountAnnotations: {}
+  # How long to wait for paygops pods to stop gracefully
+  terminationGracePeriod: 30
+  # Extra environment variables for paygops container.
+  envFrom: []
   # - configMapRef:
   #     name: config-secret
   extraEnvs: []
-# This is the PriorityClass settings as defined in
-# https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass  
-  priorityClassName: "" 
+  # This is the PriorityClass settings as defined in
+  # https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass
+  priorityClassName: ""
   # ph-ee-connector-ams-paygopsConfig: ""
   #   ph-ee-connector-ams-paygops.yml: |
   # - User that the container will execute as.
@@ -966,44 +972,44 @@ paygops_connector:
   securityContext:
     runAsUser: 0
     privileged: false
-  resources:    
+  resources:
     limits:
       memory: "512M"
       cpu: "500m"
     requests:
       memory: "512M"
-      cpu: "100m"       
+      cpu: "100m"
   deployment:
     annotations: {}
     affinity: {}
     nodeSelector: {}
     tolerations: []
     envFrom: []
-  # - configMapRef:
-  #     name: config-secret
+    # - configMapRef:
+    #     name: config-secret
     extraEnvs: []
-  # - User that the container will execute as.
-  # Not necessary to run as root (0) as the paygops Deployment use cases do not need access to Kubernetes Node internals
-  # - Typically not necessarily unless running within environments such as OpenShift.
+    # - User that the container will execute as.
+    # Not necessary to run as root (0) as the paygops Deployment use cases do not need access to Kubernetes Node internals
+    # - Typically not necessarily unless running within environments such as OpenShift.
     securityContext:
       runAsUser: 0
       privileged: false
-    resources:    
+    resources:
       limits:
         memory: "512M"
         cpu: "500m"
       requests:
         memory: "512M"
-        cpu: "100m"    
+        cpu: "100m"
 # Allows you to add any config files in /usr/share/
-    # such as ph-ee-connector-ams-paygops.yml for deployment  
-    # ph-ee-connector-ams-paygopsConfig: {}
-    #   ph-ee-connector-ams-paygops.yml: |
+# such as ph-ee-connector-ams-paygops.yml for deployment
+# ph-ee-connector-ams-paygopsConfig: {}
+#   ph-ee-connector-ams-paygops.yml: |
 
 messagegateway:
   enabled: false
   replicas: 1
-  image: docker.io/openmf/message-gateway:v1.0.0
+  image: docker.io/openmf/message-gateway:v1.1.0
   imagePullPolicy: "Always"
   CALLBACKCONFIG_HOST: "ph-ee-connector-notifications"
   HOSTCONFIG_HOST: "message-gateway"
@@ -1019,7 +1025,7 @@ messagegateway:
     initialDelaySeconds: 120
     periodSeconds: 30
     failureThreshold: 3
-    timeoutSeconds: 5 
+    timeoutSeconds: 5
   readinessProbe:
     httpGet:
       path: /actuator/health/readiness
@@ -1028,22 +1034,22 @@ messagegateway:
     periodSeconds: 30
     failureThreshold: 3
     timeoutSeconds: 5
-# Whether this chart should self-manage its service account, role, and associated role binding.
-  managedServiceAccount: true 
-# Custom service account override that the pod will use
-  serviceAccount: "" 
-# Annotations to add to the ServiceAccount that is created if the serviceAccount value isn't set.
-  serviceAccountAnnotations: {} 
-# How long to wait for message-gateway pods to stop gracefully
-  terminationGracePeriod: 30 
-# Extra environment variables for message-gateway container.
-  envFrom: [] 
+  # Whether this chart should self-manage its service account, role, and associated role binding.
+  managedServiceAccount: true
+  # Custom service account override that the pod will use
+  serviceAccount: ""
+  # Annotations to add to the ServiceAccount that is created if the serviceAccount value isn't set.
+  serviceAccountAnnotations: {}
+  # How long to wait for message-gateway pods to stop gracefully
+  terminationGracePeriod: 30
+  # Extra environment variables for message-gateway container.
+  envFrom: []
   # - configMapRef:
   #     name: config-secret
   extraEnvs: []
-# This is the PriorityClass settings as defined in
-# https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass  
-  priorityClassName: "" 
+  # This is the PriorityClass settings as defined in
+  # https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass
+  priorityClassName: ""
   # ph-ee-message-gatewayConfig: ""
   #   ph-ee-message-gateway.yml: |
   # - User that the container will execute as.
@@ -1052,15 +1058,15 @@ messagegateway:
   securityContext:
     runAsUser: 0
     privileged: false
-  resources:    
+  resources:
     limits:
       memory: "512M"
       cpu: "500m"
     requests:
       memory: "512M"
-      cpu: "100m"   
-# Enabling this will publicly expose your message-gateway instance.
-# Only enable this if you have security enabled on your cluster    
+      cpu: "100m"
+  # Enabling this will publicly expose your message-gateway instance.
+  # Only enable this if you have security enabled on your cluster
   ingress:
     enabled: true
     path: "/messages"
@@ -1072,38 +1078,38 @@ messagegateway:
       telerivet_api_key: ""
     value:
       api_key: "<api_key>"
-      project_id: "<project_id>"  
+      project_id: "<project_id>"
   deployment:
     annotations: {}
     affinity: {}
     nodeSelector: {}
     tolerations: []
     envFrom: []
-  # - configMapRef:
-  #     name: config-secret
+    # - configMapRef:
+    #     name: config-secret
     extraEnvs: []
-  # - User that the container will execute as.
-  # Not necessary to run as root (0) as the message-gateway Deployment use cases do not need access to Kubernetes Node internals
-  # - Typically not necessarily unless running within environments such as OpenShift.
+    # - User that the container will execute as.
+    # Not necessary to run as root (0) as the message-gateway Deployment use cases do not need access to Kubernetes Node internals
+    # - Typically not necessarily unless running within environments such as OpenShift.
     securityContext:
       runAsUser: 0
       privileged: false
-    resources:    
+    resources:
       limits:
         memory: "512M"
         cpu: "500m"
       requests:
         memory: "512M"
-        cpu: "100m"    
+        cpu: "100m"
 # Allows you to add any config files in /usr/share/
-    # such as message-gateway.yml for deployment  
-    # message-gatewayConfig: {}
-    #   message-gateway.yml: |
+# such as message-gateway.yml for deployment
+# message-gatewayConfig: {}
+#   message-gateway.yml: |
 
 notifications:
   enabled: true
   replicas: 1
-  image: docker.io/openmf/ph-ee-notifications:v1.0.0
+  image: docker.io/openmf/ph-ee-notifications:v1.3.0
   imagePullPolicy: "Always"
   MESSAGEGATEWAYCONFIG_HOST: "message-gateway"
   NOTIFICATION_LOCAL_HOST: "ph-ee-connector-notifications"
@@ -1119,7 +1125,7 @@ notifications:
     initialDelaySeconds: 120
     periodSeconds: 30
     failureThreshold: 3
-    timeoutSeconds: 5 
+    timeoutSeconds: 5
   readinessProbe:
     httpGet:
       path: /actuator/health/readiness
@@ -1128,22 +1134,22 @@ notifications:
     periodSeconds: 30
     failureThreshold: 3
     timeoutSeconds: 5
-# Whether this chart should self-manage its service account, role, and associated role binding.
-  managedServiceAccount: true 
-# Custom service account override that the pod will use
-  serviceAccount: "" 
-# Annotations to add to the ServiceAccount that is created if the serviceAccount value isn't set.
-  serviceAccountAnnotations: {} 
-# How long to wait for notifications pods to stop gracefully
-  terminationGracePeriod: 30 
-# Extra environment variables for notifications container.
-  envFrom: [] 
+  # Whether this chart should self-manage its service account, role, and associated role binding.
+  managedServiceAccount: true
+  # Custom service account override that the pod will use
+  serviceAccount: ""
+  # Annotations to add to the ServiceAccount that is created if the serviceAccount value isn't set.
+  serviceAccountAnnotations: {}
+  # How long to wait for notifications pods to stop gracefully
+  terminationGracePeriod: 30
+  # Extra environment variables for notifications container.
+  envFrom: []
   # - configMapRef:
   #     name: config-secret
   extraEnvs: []
-# This is the PriorityClass settings as defined in
-# https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass  
-  priorityClassName: "" 
+  # This is the PriorityClass settings as defined in
+  # https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass
+  priorityClassName: ""
   # ph-ee-connector-notificationsConfig: ""
   #   ph-ee-connector-notifications.yml: |
   # - User that the container will execute as.
@@ -1152,15 +1158,15 @@ notifications:
   securityContext:
     runAsUser: 0
     privileged: false
-  resources:    
+  resources:
     limits:
       memory: "512M"
       cpu: "500m"
     requests:
       memory: "512M"
-      cpu: "100m"  
-# Enabling this will publicly expose your notifications instance.
-# Only enable this if you have security enabled on your cluster    
+      cpu: "100m"
+  # Enabling this will publicly expose your notifications instance.
+  # Only enable this if you have security enabled on your cluster
   ingress:
     enabled: false
     path: "/notifications"
@@ -1172,31 +1178,31 @@ notifications:
     nodeSelector: {}
     tolerations: []
     envFrom: []
-  # - configMapRef:
-  #     name: config-secret
+    # - configMapRef:
+    #     name: config-secret
     extraEnvs: []
-  # - User that the container will execute as.
-  # Not necessary to run as root (0) as the notifications Deployment use cases do not need access to Kubernetes Node internals
-  # - Typically not necessarily unless running within environments such as OpenShift.
+    # - User that the container will execute as.
+    # Not necessary to run as root (0) as the notifications Deployment use cases do not need access to Kubernetes Node internals
+    # - Typically not necessarily unless running within environments such as OpenShift.
     securityContext:
       runAsUser: 0
       privileged: false
-    resources:    
+    resources:
       limits:
         memory: "512M"
         cpu: "500m"
       requests:
         memory: "512"
-        cpu: "100m"    
+        cpu: "100m"
 # Allows you to add any config files in /usr/share/
-    # such as ph-ee-connector-notifications.yml for deployment  
-    # ph-ee-connector-notificationsConfig: {}
-    #   ph-ee-connector-notifications.yml: |
+# such as ph-ee-connector-notifications.yml for deployment
+# ph-ee-connector-notificationsConfig: {}
+#   ph-ee-connector-notifications.yml: |
 
 zeebe_ops:
   enabled: false
   replicas: 1
-  image: docker.io/openmf/ph-ee-zeebe-ops:v1.1.0
+  image: docker.io/openmf/ph-ee-zeebe-ops:v1.2.0
   imagePullPolicy: "Always"
   imagePullSecrets: []
   elasticsearch_contactpoint: "ph-ee-elasticsearch:9200"
@@ -1210,7 +1216,7 @@ zeebe_ops:
     initialDelaySeconds: 120
     periodSeconds: 30
     failureThreshold: 3
-    timeoutSeconds: 5 
+    timeoutSeconds: 5
   readinessProbe:
     httpGet:
       path: /actuator/health/readiness
@@ -1219,22 +1225,22 @@ zeebe_ops:
     periodSeconds: 30
     failureThreshold: 3
     timeoutSeconds: 5
-# Whether this chart should self-manage its service account, role, and associated role binding.
-  managedServiceAccount: true 
-# Custom service account override that the pod will use
-  serviceAccount: "" 
-# Annotations to add to the ServiceAccount that is created if the serviceAccount value isn't set.
-  serviceAccountAnnotations: {} 
-# How long to wait for Zeebe-ops pods to stop gracefully
-  terminationGracePeriod: 30 
-# Extra environment variables for Zeebe-ops container.
-  envFrom: [] 
+  # Whether this chart should self-manage its service account, role, and associated role binding.
+  managedServiceAccount: true
+  # Custom service account override that the pod will use
+  serviceAccount: ""
+  # Annotations to add to the ServiceAccount that is created if the serviceAccount value isn't set.
+  serviceAccountAnnotations: {}
+  # How long to wait for Zeebe-ops pods to stop gracefully
+  terminationGracePeriod: 30
+  # Extra environment variables for Zeebe-ops container.
+  envFrom: []
   # - configMapRef:
   #     name: config-secret
   extraEnvs: []
-# This is the PriorityClass settings as defined in
-# https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass  
-  priorityClassName: "" 
+  # This is the PriorityClass settings as defined in
+  # https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass
+  priorityClassName: ""
   # ph-ee-zeebe-opsConfig: ""
   #   ph-ee-zeebe-ops.yml: |
   # - User that the container will execute as.
@@ -1243,15 +1249,15 @@ zeebe_ops:
   securityContext:
     runAsUser: 0
     privileged: false
-  resources:    
+  resources:
     limits:
       memory: "512M"
       cpu: "500m"
     requests:
       memory: "512M"
-      cpu: "100m" 
-# Enabling this will publicly expose your zeebe_ops instance.
-# Only enable this if you have security enabled on your cluster      
+      cpu: "100m"
+  # Enabling this will publicly expose your zeebe_ops instance.
+  # Only enable this if you have security enabled on your cluster
   ingress:
     enabled: false
     path: "/zeebeops"
@@ -1263,32 +1269,31 @@ zeebe_ops:
     nodeSelector: {}
     tolerations: []
     envFrom: []
-  # - configMapRef:
-  #     name: config-secret
+    # - configMapRef:
+    #     name: config-secret
     extraEnvs: []
-  # - User that the container will execute as.
-  # Not necessary to run as root (0) as the zeebeops Deployment use cases do not need access to Kubernetes Node internals
-  # - Typically not necessarily unless running within environments such as OpenShift.
+    # - User that the container will execute as.
+    # Not necessary to run as root (0) as the zeebeops Deployment use cases do not need access to Kubernetes Node internals
+    # - Typically not necessarily unless running within environments such as OpenShift.
     securityContext:
       runAsUser: 0
       privileged: false
-    resources:    
+    resources:
       limits:
         memory: "512M"
         cpu: "500m"
       requests:
         memory: "512M"
-        cpu: "100m"    
+        cpu: "100m"
 # Allows you to add any config files in /usr/share/
-    # such as zeebeops.yml for deployment  
-    # ph-ee-zeebe-opsConfig: {}
-    #   ph-ee-zeebe-ops.yml: |
-
+# such as zeebeops.yml for deployment
+# ph-ee-zeebe-opsConfig: {}
+#   ph-ee-zeebe-ops.yml: |
 
 importer_es:
   enabled: true
   replicas: 1
-  image: docker.io/openmf/ph-ee-importer-es:v1.4.0
+  image: docker.io/openmf/ph-ee-importer-es:v1.6.0
   imagePullPolicy: "Always"
   importer_elasticsearch_url: "http://ph-ee-elasticsearch:9200/"
   reporting:
@@ -1339,7 +1344,7 @@ importer_es:
     initialDelaySeconds: 120
     periodSeconds: 30
     failureThreshold: 3
-    timeoutSeconds: 5 
+    timeoutSeconds: 5
   readinessProbe:
     httpGet:
       path: /actuator/health/readiness
@@ -1348,22 +1353,22 @@ importer_es:
     periodSeconds: 30
     failureThreshold: 3
     timeoutSeconds: 5
-# Whether this chart should self-manage its service account, role, and associated role binding.
-  managedServiceAccount: true 
-# Custom service account override that the pod will use
-  serviceAccount: "" 
-# Annotations to add to the ServiceAccount that is created if the serviceAccount value isn't set.
-  serviceAccountAnnotations: {} 
-# How long to wait for Zeebe-ops pods to stop gracefully
-  terminationGracePeriod: 30 
-# Extra environment variables for Zeebe-ops container.
-  envFrom: [] 
+  # Whether this chart should self-manage its service account, role, and associated role binding.
+  managedServiceAccount: true
+  # Custom service account override that the pod will use
+  serviceAccount: ""
+  # Annotations to add to the ServiceAccount that is created if the serviceAccount value isn't set.
+  serviceAccountAnnotations: {}
+  # How long to wait for Zeebe-ops pods to stop gracefully
+  terminationGracePeriod: 30
+  # Extra environment variables for Zeebe-ops container.
+  envFrom: []
   # - configMapRef:
   #     name: config-secret
   extraEnvs: []
-# This is the PriorityClass settings as defined in
-# https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass  
-  priorityClassName: "" 
+  # This is the PriorityClass settings as defined in
+  # https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass
+  priorityClassName: ""
   # ph-ee-zeebe-opsConfig: ""
   #   ph-ee-zeebe-ops.yml: |
   # - User that the container will execute as.
@@ -1372,63 +1377,74 @@ importer_es:
   securityContext:
     runAsUser: 0
     privileged: false
-  resources:    
+  resources:
     limits:
       memory: "512M"
       cpu: "500m"
     requests:
       memory: "512M"
-      cpu: "100m"  
+      cpu: "100m"
   javaToolOptions: "-Xmx256M"
   deployment:
     annotations: {}
 
-
-
 mockpayment:
   enabled: false
-  image: docker.io/openmf/ph-ee-connector-mock-payment-schema:latest
+  image: docker.io/openmf/ph-ee-connector-mock-payment-schema:v1.4.0
   replicas: 1
   mockFailure:
-    percentage: "50"
+    percentage: "0"
   limits:
     memory: "512M"
     cpu: "500m"
   requests:
-    memory: "512M"
+    memory: "256M"
     cpu: "100m"
   deployment:
     annotations: {}
 
-
 kafka:
-  enabled: false
-  replicas: 1
-  image: "spotify/kafka"
-  advertised:
-    host: "kafka"
-    port: "9093"
-  limits:
-    memory: "512M"
-    cpu: "500m"
-  requests:
-    memory: "512M"
-    cpu: "100m"
-  deployment:
-    annotations:
-      deployTime: "{{ .Values.deployTime }}"
+  enabled: true
+  fullnameOverride: kafka
+
+  provisioning:
+    enabled: true
+    topics:
+      - name: zeebe-export
+        partitions: 1
+        replicationFactor: 1
+
+  controller:
+    replicaCount: 3
+
+  listeners:
+    client:
+      protocol: PLAINTEXT
+
+    controller:
+      protocol: PLAINTEXT
+
+    interbroker:
+      protocol: PLAINTEXT
+
+    external:
+      protocol: PLAINTEXT
+
+  kraft:
+    clusterId: spDnn4oSr6DLKPx3cEheLp
 
 importer_rdbms:
   enabled: true
   replicas: 1
-  image: docker.io/openmf/ph-ee-importer-rdbms:v1.4.1
+  image: docker.io/openmf/ph-ee-importer-rdbms:v1.7.1
   imagePullPolicy: "Always"
+  SPRING_PROFILES_ACTIVE: "local,tenantsConnection"
   datasource:
-      username: "mifos"
-      password: "password"
-      host: "operationsmysql"
-      port: 3306
-      schema: "tenants"
+    username: "mifos"
+    password: "password"
+    host: "operationsmysql"
+    port: 3306
+    schema: "tenants"
   livenessProbe:
     httpGet:
       path: /actuator/health/liveness
@@ -1445,22 +1461,22 @@ importer_rdbms:
     periodSeconds: 30
     failureThreshold: 3
     timeoutSeconds: 5
-# Whether this chart should self-manage its service account, role, and associated role binding.
-  managedServiceAccount: true 
-# Custom service account override that the pod will use
-  serviceAccount: "" 
-# Annotations to add to the ServiceAccount that is created if the serviceAccount value isn't set.
-  serviceAccountAnnotations: {} 
-# How long to wait for importer_rdbms pods to stop gracefully
-  terminationGracePeriod: 30 
-# Extra environment variables for importer_rdbms container.
-  envFrom: [] 
+  # Whether this chart should self-manage its service account, role, and associated role binding.
+  managedServiceAccount: true
+  # Custom service account override that the pod will use
+  serviceAccount: ""
+  # Annotations to add to the ServiceAccount that is created if the serviceAccount value isn't set.
+  serviceAccountAnnotations: {}
+  # How long to wait for importer_rdbms pods to stop gracefully
+  terminationGracePeriod: 30
+  # Extra environment variables for importer_rdbms container.
+  envFrom: []
   # - configMapRef:
   #     name: config-secret
   extraEnvs: []
-# This is the PriorityClass settings as defined in
-# https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass  
-  priorityClassName: "" 
+  # This is the PriorityClass settings as defined in
+  # https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass
+  priorityClassName: ""
   # ph-ee-importer_rdbmsConfig: ""
   #   ph-ee-importer_rdbms.yml: |
   # - User that the container will execute as.
@@ -1469,45 +1485,45 @@ importer_rdbms:
   securityContext:
     runAsUser: 0
     privileged: false
-  resources:    
+  resources:
     limits:
       memory: "512M"
       cpu: "500m"
     requests:
       memory: "512M"
-      cpu: "100m"      
+      cpu: "100m"
   deployment:
     annotations: {}
     affinity: {}
     nodeSelector: {}
     tolerations: []
     envFrom: []
-  # - configMapRef:
-  #     name: config-secret
+    # - configMapRef:
+    #     name: config-secret
     extraEnvs: []
-  # - User that the container will execute as.
-  # Not necessary to run as root (0) as the importer_rdbms Deployment use cases do not need access to Kubernetes Node internals
-  # - Typically not necessarily unless running within environments such as OpenShift.
+    # - User that the container will execute as.
+    # Not necessary to run as root (0) as the importer_rdbms Deployment use cases do not need access to Kubernetes Node internals
+    # - Typically not necessarily unless running within environments such as OpenShift.
     securityContext:
       runAsUser: 0
       privileged: false
-    resources:    
+    resources:
       limits:
         memory: "512M"
         cpu: "500m"
       requests:
         memory: "512M"
-        cpu: "100m"    
-# Allows you to add any config files in /usr/share/
-    # such as ph-ee-importer_rdbms.yml for deployment  
-    # ph-ee-importer_rdbmsConfig: {}
-    #   ph-ee-importer_rdbms.yml: |
+        cpu: "100m"
+  # Allows you to add any config files in /usr/share/
+  # such as ph-ee-importer_rdbms.yml for deployment
+  # ph-ee-importer_rdbmsConfig: {}
+  #   ph-ee-importer_rdbms.yml: |
   javaToolOptions: "-Xmx256M"
 
 connector_bulk:
   enabled: false
   replicas: 1
-  image: docker.io/openmf/ph-ee-bulk-processor:v1.6.1
+  image: docker.io/openmf/ph-ee-bulk-processor:v1.9.0
   imagePullPolicy: "Always"
   camel_disable_ssl: true
   channel:
@@ -1515,13 +1531,12 @@ connector_bulk:
   pollingApi:
     timer: "180"
   tenants: ""
-  bucket_name: "paymenthub-ee"
   operations_app:
-      contactpoint: "ph-ee-operations-app"
-      endpoints:
-        batch_transaction: "/api/v1/batch/transactions"
+    contactpoint: "http://ph-ee-operations-app:5000"
+    endpoints:
+      batch_transaction: "/api/v1/batch/transactions"
   identity_account_mapper:
-    hostname: "ph-ee-identity-account-mapper"
+    hostname: "http://ph-ee-identity-account-mapper:80"
   config:
     partylookup:
       enable: false
@@ -1544,259 +1559,10 @@ connector_bulk:
       enable: true
       completion_rate: 95
     deduplication:
-      enabled: true  
+      enabled: true
   aws:
-    region: "<region>"
-    access_key: "<access key>"
-    secret_key: "<secret key>"
-  livenessProbe:
-    httpGet:
-      path: /actuator/health/liveness
-      port: 9191
-    initialDelaySeconds: 120
-    periodSeconds: 30
-    failureThreshold: 3
-    timeoutSeconds: 5 
-  readinessProbe:
-    httpGet:
-      path: /actuator/health/readiness
-      port: 9191
-    initialDelaySeconds: 120
-    periodSeconds: 30
-    failureThreshold: 3
-    timeoutSeconds: 5
-# Whether this chart should self-manage its service account, role, and associated role binding.
-  managedServiceAccount: true 
-# Custom service account override that the pod will use
-  serviceAccount: "" 
-# Annotations to add to the ServiceAccount that is created if the serviceAccount value isn't set.
-  serviceAccountAnnotations: {} 
-# How long to wait for connector_bulk pods to stop gracefully
-  terminationGracePeriod: 30 
-# Extra environment variables for connector_bulk container.
-  envFrom: [] 
-  # - configMapRef:
-  #     name: config-secret
-  extraEnvs: []
-# This is the PriorityClass settings as defined in
-# https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass  
-  priorityClassName: "" 
-  # ph-ee-connector-bulkConfig: ""
-  #   ph-ee-connector-bulk.yml: |
-  # - User that the container will execute as.
-  # Not necessary to run as root (0) as the connector_bulk Deployment use cases do not need access to Kubernetes Node internals
-  # - Typically not necessarily unless running within environments such as OpenShift.
-  securityContext:
-    runAsUser: 0
-    privileged: false
-  resources:    
-    limits:
-      memory: "512M"
-      cpu: "500m"
-    requests:
-      memory: "512M"
-      cpu: "100m"
-  service:
-    annotations: {}
-# Enabling this will publicly expose your connector_bulk instance.
-# Only enable this if you have security enabled on your cluster
-  ingress:
-    enabled: false 
-    annotations: {}    
-  deployment:
-    annotations: {}
-    affinity: {}
-    nodeSelector: {}
-    tolerations: []
-    envFrom: []
-  # - configMapRef:
-  #     name: config-secret
-    extraEnvs: []
-  # - User that the container will execute as.
-  # Not necessary to run as root (0) as the connector_bulk Deployment use cases do not need access to Kubernetes Node internals
-  # - Typically not necessarily unless running within environments such as OpenShift.
-    securityContext:
-      runAsUser: 0
-      privileged: false
-    resources:    
-      limits:
-        memory: "512M"
-        cpu: "500m"
-      requests:
-        memory: "512M"
-        cpu: "100m"
-# Allows you to add any config files in /usr/share/
-    # such as ph-ee-connector-bulk.yml for deployment  
-    # ph-ee-connector-bulkConfig: {}
-    #   ph-ee-connector-bulk.yml: |
-
-ph-ee-connector_gsma:
-  enabled: false
-  replicas: 1
-  image: docker.io/openmf/ph-ee-connector-gsma:v1.0.2
-  imagePullPolicy: "Always"
-# Whether this chart should self-manage its service account, role, and associated role binding.
-  managedServiceAccount: true 
-# Custom service account override that the pod will use
-  serviceAccount: "" 
-# Annotations to add to the ServiceAccount that is created if the serviceAccount value isn't set.
-  serviceAccountAnnotations: {} 
-# How long to wait for gsma pods to stop gracefully
-  terminationGracePeriod: 30 
-# Extra environment variables for gsma container.
-  envFrom: [] 
-  # - configMapRef:
-  #     name: config-secret
-  extraEnvs: []
-# This is the PriorityClass settings as defined in
-# https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass  
-  priorityClassName: "" 
-  # ph_ee_connector_gsmaConfig: ""
-  #   ph_ee_connector_gsma.yml: |
-  # - User that the container will execute as.
-  # Not necessary to run as root (0) as the gsma Deployment use cases do not need access to Kubernetes Node internals
-  # - Typically not necessarily unless running within environments such as OpenShift.
-  securityContext:
-    runAsUser: 0
-    privileged: false
-  resources:    
-    limits:
-      memory: "512M"
-      cpu: "500m"
-    requests:
-      memory: "512M"
-      cpu: "100m"  
-  deployment:
-    annotations: {}
-    affinity: {}
-    nodeSelector: {}
-    tolerations: []
-    envFrom: []
-  # - configMapRef:
-  #     name: config-secret
-    extraEnvs: []
-  # - User that the container will execute as.
-  # Not necessary to run as root (0) as the gsma Deployment use cases do not need access to Kubernetes Node internals
-  # - Typically not necessarily unless running within environments such as OpenShift.
-    securityContext:
-      runAsUser: 0
-      privileged: false
-    resources:    
-      limits:
-        memory: "512M"
-        cpu: "500m"
-      requests:
-        memory: "512M"
-        cpu: "100m"    
-# Allows you to add any config files in /usr/share/
-    # such as ph_ee_connector_gsma.yml for deployment  
-    # ph_ee_connector_gsmaConfig: {}
-    #   ph_ee_connector_gsma.yml: |
-
-ph-ee-connector_slcb:
-  enabled: false
-  replicas: 1
-  image: "419830066942.dkr.ecr.ap-south-1.amazonaws.com/ph-ee-slcb"
-  imageTag: "v1.1.1"
-  username: "username"
-  password: "password"
-  signature_key: "long_segnature_key"
-  auth_host: "https://g2p-test.slcb.com:8443"
-  api_host: "https://g2p-test.slcb.com:8443"
-  account_number: "003001003879112168"
-  account_type: 0
-  institutioncode: "SLCB"
-  endpoint:
-    auth: "/api/auth"
-    transaction_request: "/api/transactionRequest"
-    reconciliation: "/reconciliation"
-    account_balance: "/accountBalance"
-  config:
-    date_format: "yyyy-MM-dd'T'hh:mm:ssXXX"
-    reconciliation:
-      enable: false
-  livenessProbe:
-    httpGet:
-      path: /actuator/health/liveness
-      port: 9191
-    initialDelaySeconds: 120
-    periodSeconds: 30
-    failureThreshold: 3
-    timeoutSeconds: 5 
-  readinessProbe:
-    httpGet:
-      path: /actuator/health/readiness
-      port: 9191
-    initialDelaySeconds: 120
-    periodSeconds: 30
-    failureThreshold: 3
-    timeoutSeconds: 5
-# Whether this chart should self-manage its service account, role, and associated role binding.
-  managedServiceAccount: true 
-# Custom service account override that the pod will use
-  serviceAccount: "" 
-# Annotations to add to the ServiceAccount that is created if the serviceAccount value isn't set.
-  serviceAccountAnnotations: {} 
-# How long to wait for ph_ee_connector_slcb pods to stop gracefully
-  terminationGracePeriod: 30 
-# Extra environment variables for ph_ee_connector_slcb container.
-  envFrom: [] 
-  # - configMapRef:
-  #     name: config-secret
-  extraEnvs: []
-# This is the PriorityClass settings as defined in
-# https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass  
-  priorityClassName: "" 
-  # ph_ee_connector_slcbConfig: ""
-  #   ph_ee_connector_slcb.yml: |
-  # - User that the container will execute as.
-  # Not necessary to run as root (0) as the ph_ee_connector_slcb Deployment use cases do not need access to Kubernetes Node internals
-  # - Typically not necessarily unless running within environments such as OpenShift.
-  securityContext:
-    runAsUser: 0
-    privileged: false
-  resources:    
-    limits:
-      memory: "512M"
-      cpu: "500m"
-    requests:
-      memory: "512M"
-      cpu: "100m"          
-  deployment:
-    annotations: {}
-    affinity: {}
-    nodeSelector: {}
-    tolerations: []
-    envFrom: []
-  # - configMapRef:
-  #     name: config-secret
-    extraEnvs: []
-  # - User that the container will execute as.
-  # Not necessary to run as root (0) as the ph_ee_connector_slcb Deployment use cases do not need access to Kubernetes Node internals
-  # - Typically not necessarily unless running within environments such as OpenShift.
-    securityContext:
-      runAsUser: 0
-      privileged: false
-    resources:    
-      limits:
-        memory: "512M"
-        cpu: "500m"
-      requests:
-        memory: "512M"
-        cpu: "100m"    
-# Allows you to add any config files in /usr/share/
-    # such as ph_ee_connector_slcb.yml for deployment  
-    # ph_ee_connector_slcbConfig: {}
-    #   ph_ee_connector_slcb.yml: |
-
-connector_bulk_closedloop:
-  enabled: false
-  replicas: 1
-  channel:
-    hostname: ""
-  pollingApi:
-    timer: "180"
-  hostname: ""
+    access_key: "root"
+    secret_key: "password"
   livenessProbe:
     httpGet:
       path: /actuator/health/liveness
@@ -1825,7 +1591,7 @@ connector_bulk_closedloop:
   envFrom: []
   # - configMapRef:
   #     name: config-secret
-  extraEnvs: ""
+  extraEnvs: []
   # This is the PriorityClass settings as defined in
   # https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass
   priorityClassName: ""
@@ -1844,10 +1610,13 @@ connector_bulk_closedloop:
     requests:
       memory: "512M"
       cpu: "100m"
+  service:
+    annotations: {}
   # Enabling this will publicly expose your connector_bulk instance.
   # Only enable this if you have security enabled on your cluster
   ingress:
     enabled: false
+    annotations: {}
   deployment:
     annotations: {}
     affinity: {}
@@ -1856,7 +1625,7 @@ connector_bulk_closedloop:
     envFrom: []
     # - configMapRef:
     #     name: config-secret
-    extraEnvs: ""
+    extraEnvs: []
     # - User that the container will execute as.
     # Not necessary to run as root (0) as the connector_bulk Deployment use cases do not need access to Kubernetes Node internals
     # - Typically not necessarily unless running within environments such as OpenShift.
@@ -1870,10 +1639,192 @@ connector_bulk_closedloop:
       requests:
         memory: "512M"
         cpu: "100m"
-    # Allows you to add any config files in /usr/share/
-    # such as ph-ee-connector-bulk.yml for deployment
-    # ph-ee-connector-bulkConfig: {}
-    #   ph-ee-connector-bulk-mojaloop.yml: |
+# Allows you to add any config files in /usr/share/
+# such as ph-ee-connector-bulk.yml for deployment
+# ph-ee-connector-bulkConfig: {}
+#   ph-ee-connector-bulk.yml: |
+
+ph_ee_connector_gsma:
+  enabled: false
+  replicas: 1
+  image: docker.io/openmf/ph-ee-connector-gsma:v1.2.0
+  imagePullPolicy: "Always"
+  # Whether this chart should self-manage its service account, role, and associated role binding.
+  managedServiceAccount: true
+  # Custom service account override that the pod will use
+  serviceAccount: ""
+  # Annotations to add to the ServiceAccount that is created if the serviceAccount value isn't set.
+  serviceAccountAnnotations: {}
+  # How long to wait for gsma pods to stop gracefully
+  terminationGracePeriod: 30
+  # Extra environment variables for gsma container.
+  envFrom: []
+  # - configMapRef:
+  #     name: config-secret
+  extraEnvs: []
+  # This is the PriorityClass settings as defined in
+  # https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass
+  priorityClassName: ""
+  # ph_ee_connector_gsmaConfig: ""
+  #   ph_ee_connector_gsma.yml: |
+  # - User that the container will execute as.
+  # Not necessary to run as root (0) as the gsma Deployment use cases do not need access to Kubernetes Node internals
+  # - Typically not necessarily unless running within environments such as OpenShift.
+  securityContext:
+    runAsUser: 0
+    privileged: false
+  resources:
+    limits:
+      memory: "512M"
+      cpu: "500m"
+    requests:
+      memory: "512M"
+      cpu: "100m"
+  deployment:
+    annotations: {}
+    affinity: {}
+    nodeSelector: {}
+    tolerations: []
+    envFrom: []
+    # - configMapRef:
+    #     name: config-secret
+    extraEnvs: []
+    # - User that the container will execute as.
+    # Not necessary to run as root (0) as the gsma Deployment use cases do not need access to Kubernetes Node internals
+    # - Typically not necessarily unless running within environments such as OpenShift.
+    securityContext:
+      runAsUser: 0
+      privileged: false
+    resources:
+      limits:
+        memory: "512M"
+        cpu: "500m"
+      requests:
+        memory: "512M"
+        cpu: "100m"
+# Allows you to add any config files in /usr/share/
+# such as ph_ee_connector_gsma.yml for deployment
+# ph_ee_connector_gsmaConfig: {}
+#   ph_ee_connector_gsma.yml: |
+
+ph-ee-connector_slcb:
+  enabled: false
+  replicas: 1
+  image: "419830066942.dkr.ecr.ap-south-1.amazonaws.com/ph-ee-slcb"
+  imageTag: "v1.4.0"
+  username: "username"
+  password: "password"
+  signature_key: "long_segnature_key"
+  auth_host: "https://g2p-test.slcb.com:8443"
+  api_host: "https://g2p-test.slcb.com:8443"
+  account_number: "003001003879112168"
+  account_type: 0
+  institutioncode: "SLCB"
+  endpoint:
+    auth: "/api/auth"
+    transaction_request: "/api/transactionRequest"
+    reconciliation: "/reconciliation"
+    account_balance: "/accountBalance"
+  config:
+    date_format: "yyyy-MM-dd'T'hh:mm:ssXXX"
+    reconciliation:
+      enable: false
+  livenessProbe:
+    httpGet:
+      path: /actuator/health/liveness
+      port: 9191
+    initialDelaySeconds: 120
+    periodSeconds: 30
+    failureThreshold: 3
+    timeoutSeconds: 5
+  readinessProbe:
+    httpGet:
+      path: /actuator/health/readiness
+      port: 9191
+    initialDelaySeconds: 120
+    periodSeconds: 30
+    failureThreshold: 3
+    timeoutSeconds: 5
+  # Whether this chart should self-manage its service account, role, and associated role binding.
+  managedServiceAccount: true
+  # Custom service account override that the pod will use
+  serviceAccount: ""
+  # Annotations to add to the ServiceAccount that is created if the serviceAccount value isn't set.
+  serviceAccountAnnotations: {}
+  # How long to wait for ph_ee_connector_slcb pods to stop gracefully
+  terminationGracePeriod: 30
+  # Extra environment variables for ph_ee_connector_slcb container.
+  envFrom: []
+  # - configMapRef:
+  #     name: config-secret
+  extraEnvs: []
+  # This is the PriorityClass settings as defined in
+  # https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass
+  priorityClassName: ""
+  # ph_ee_connector_slcbConfig: ""
+  #   ph_ee_connector_slcb.yml: |
+  # - User that the container will execute as.
+  # Not necessary to run as root (0) as the ph_ee_connector_slcb Deployment use cases do not need access to Kubernetes Node internals
+  # - Typically not necessarily unless running within environments such as OpenShift.
+  securityContext:
+    runAsUser: 0
+    privileged: false
+  resources:
+    limits:
+      memory: "512M"
+      cpu: "500m"
+    requests:
+      memory: "512M"
+      cpu: "100m"
+  deployment:
+    annotations: {}
+    affinity: {}
+    nodeSelector: {}
+    tolerations: []
+    envFrom: []
+    # - configMapRef:
+    #     name: config-secret
+    extraEnvs: []
+    # - User that the container will execute as.
+    # Not necessary to run as root (0) as the ph_ee_connector_slcb Deployment use cases do not need access to Kubernetes Node internals
+    # - Typically not necessarily unless running within environments such as OpenShift.
+    securityContext:
+      runAsUser: 0
+      privileged: false
+    resources:
+      limits:
+        memory: "512M"
+        cpu: "500m"
+      requests:
+        memory: "512M"
+        cpu: "100m"
+# Allows you to add any config files in /usr/share/
+# such as ph_ee_connector_slcb.yml for deployment
+# ph_ee_connector_slcbConfig: {}
+#   ph_ee_connector_slcb.yml: |
+
+connector:
+  enabled: false
+  replicas: 1
+  image: docker.io/openmf/ph-ee-connector-bulk:v1.1.0
+  ingress:
+    enabled: true
+    annotations:
+      kubernetes.io/ingress.class: nginx
+    tls:
+      - secretName: sandbox-secret
+    hosts:
+      - host: connector.sandbox.mifos.io
+        paths:
+          - path: "/"
+            backend:
+              service:
+                name: ph-ee-connector
+                port:
+                  number: 80
+  deployment:
+    annotations:
+      deployTime: "{{ .Values.deployTime }}"
 
 mock_oracle:
   enabled: false
@@ -1887,8 +1838,8 @@ mock_oracle:
   requests:
     memory: "512M"
     cpu: "100m"
-# Enabling this will publicly expose your mock_oracle instance.
-# Only enable this if you have security enabled on your cluster    
+  # Enabling this will publicly expose your mock_oracle instance.
+  # Only enable this if you have security enabled on your cluster
   ingress:
     enabled: true
     path: "/"
@@ -1900,20 +1851,20 @@ mock_oracle:
 keycloak:
   enabled: false
   fullnameOverride: "keycloak"
-# Enabling this will publicly expose your keycloak instance.
-# Only enable this if you have security enabled on your cluster
+  # Enabling this will publicly expose your keycloak instance.
+  # Only enable this if you have security enabled on your cluster
   ingress:
     enabled: false
     ingressClassName: "kong"
     rules:
-      - host: 'keycloak.mifos.io'
+      - host: "keycloak.mifos.io"
     tls: []
   postgresql:
     initdbUser: "keycloak"
     initdbPassword: "keycloak"
     initdbScripts:
       my_init_script.sql: |-
-          CREATE DATABASE kong;
+        CREATE DATABASE kong;
   extraVolumes: |
     - name: realm-secret
       secret:
@@ -1924,13 +1875,13 @@ keycloak:
       readOnly: true
   extraEnv: |
     - name: KEYCLOAK_IMPORT
-      value: /realm/kong-keycloak-realm.json     
+      value: /realm/kong-keycloak-realm.json
 
 integration_test:
   enabled: false
   replicas: 1
-  image: "419830066942.dkr.ecr.ap-south-1.amazonaws.com/phee-integration-test"
-  imageTag: latest
+  image: "docker.io/openmf/ph-ee-integration-test"
+  imageTag: v1.4.0-rc.1
   imagePullPolicy: "Never"
   limits:
     cpu: "500m"
@@ -1939,11 +1890,11 @@ integration_test:
     cpu: "100m"
     memory: "2Gi"
   operations_app:
-    contactpoint: "ph-ee-operations-app"
+    contactpoint: "http://ph-ee-operations-app:80"
   bulk_processor:
-    contactpoint: "ph-ee-connector-bulk"
+    contactpoint: "https://ph-ee-connector-bulk:8443"
   channel_connector:
-    contactpoint: "ph-ee-connector-channel"
+    contactpoint: "https://ph-ee-connector-channel:8443"
   kafka:
     brokers: ""
     topics: ""
@@ -1971,7 +1922,7 @@ redis:
   replica:
     replicaCount: 1
 volumeClaimTemplate:
-    storageClassName: "gp2"
+  storageClassName: "gp2"
 
 kong:
   enabled: false
@@ -1995,8 +1946,8 @@ kong:
       enabled: true
     tls:
       enabled: false
-# Enabling this will publicly expose your kong instance.
-# Only enable this if you have security enabled on your cluster      
+    # Enabling this will publicly expose your kong instance.
+    # Only enable this if you have security enabled on your cluster
     ingress:
       enabled: true
       ingressClassName: "kong"
@@ -2032,7 +1983,7 @@ kong:
           - "*"
         credentials: true
         max_age: 3600
-        exposed_headers :
+        exposed_headers:
           - "X-Auth-Token"
         preflight_continue: false
     - apiVersion: configuration.konghq.com/v1
@@ -2052,13 +2003,10 @@ kong:
         introspection_endpoint: http://keycloak.localhost/auth/realms/Kong/protocol/openid-connect/token/introspect
         redirect_after_logout_uri: http://keycloak.localhost/auth/realms/kong-oidc/protocol/openid-connect/logout?redirect_uri=http://keycloak.localhost
 
-    
-
 vouchers:
   enabled: false
   replicas: 1
-  image: docker.io/openmf/ph-ee-vouchers:latest
-  hostname: "vouchers.sandbox.mifos.io"
+  image: docker.io/openmf/ph-ee-vouchers:v1.1.0
   ingress:
     enabled: true
     annotations:
@@ -2082,27 +2030,179 @@ vouchers:
       url: jdbc:mysql://operationsmysql:3306/voucher_management
       username: mifos
       password: password
-
   async:
     core_pool_size: 10
     max_pool_size: 10
     queue_capacity: 100
-
   expiry_time: 60
-
   payer:
     tenant: rhino
     identifier: 12345678
     identifierType: MSISDN
-  voucher:
-    hostname: "https://vouchers.sandbox.mifos.io"
-
   salting:
     enabled: true
-
   identity-account-mapper:
-    hostname: "https://identity-mapper.sandbox.mifos.io"
+    hostname: "https://ph-ee-identity-mapper:80"
   operations:
-    hostname: "https://ops-bk.sandbox.mifos.io"
+    hostname: "http://ph-ee-operations-app:80"
     endpoints:
       transfers: "/api/v1/transfers?size=1&page=0"
+
+billPay:
+  enabled: false
+  replicas: 1
+  image: docker.io/openmf/ph-ee-bill-pay:v1.0.0
+  imagePullPolicy: "Always"
+  livenessProbe:
+    httpGet:
+      path: /actuator/health/liveness
+      port: 8080
+      scheme: HTTPS
+    initialDelaySeconds: 120
+    periodSeconds: 30
+    failureThreshold: 3
+    timeoutSeconds: 5
+  readinessProbe:
+    httpGet:
+      path: /actuator/health/readiness
+      port: 8080
+      scheme: HTTPS
+    initialDelaySeconds: 120
+    periodSeconds: 30
+    failureThreshold: 3
+    timeoutSeconds: 5
+  # Whether this chart should self-manage its service account, role, and associated role binding.
+  managedServiceAccount: true
+  # Custom service account override that the pod will use
+  serviceAccount: "billPay"
+  # Annotations to add to the ServiceAccount that is created if the serviceAccount value isn't set.
+  serviceAccountAnnotations: {}
+  # How long to wait for pods to stop gracefully
+  terminationGracePeriod: 30
+  # Extra environment variables for container.
+  envFrom: []
+  # - configMapRef:
+  #     name: config-secret
+  extraEnvs: []
+  # This is the PriorityClass settings as defined in
+  # https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass
+  priorityClassName: ""
+  securityContext:
+    runAsUser: 0
+    privileged: false
+  resources:
+    limits:
+      memory: "512M"
+      cpu: "500m"
+    requests:
+      memory: "512M"
+      cpu: "100m"
+  service:
+    annotations: {}
+  # Only enable this if you have security enabled on your cluster
+  ingress:
+    enabled: true
+    path: "/billPay"
+    annotations: {}
+    backend: {}
+    stub_backend: {}
+  deployment:
+    annotations: {}
+    affinity: {}
+    nodeSelector: {}
+    tolerations: []
+    envFrom: []
+    # - configMapRef:
+    #     name: config-secret
+    extraEnvs: []
+    # - User that the container will execute as.
+    # - Typically not necessarily unless running within environments such as OpenShift.
+
+crm:
+  enabled: false
+  replicas: 1
+  image: docker.io/openmf/ph-ee-connector-crm:v1.0.0
+  imagePullPolicy: "Always"
+  livenessProbe:
+    httpGet:
+      path: /actuator/health/liveness
+      port: 8080
+      scheme: HTTPS
+    initialDelaySeconds: 120
+    periodSeconds: 30
+    failureThreshold: 3
+    timeoutSeconds: 5
+  readinessProbe:
+    httpGet:
+      path: /actuator/health/readiness
+      port: 8080
+      scheme: HTTPS
+    initialDelaySeconds: 120
+    periodSeconds: 30
+    failureThreshold: 3
+    timeoutSeconds: 5
+  # Whether this chart should self-manage its service account, role, and associated role binding.
+  managedServiceAccount: true
+  # Custom service account override that the pod will use
+  serviceAccount: "crm"
+  # Annotations to add to the ServiceAccount that is created if the serviceAccount value isn't set.
+  serviceAccountAnnotations: {}
+  # How long to wait for pods to stop gracefully
+  terminationGracePeriod: 30
+  # Extra environment variables for container.
+  envFrom: []
+  # - configMapRef:
+  #     name: config-secret
+  extraEnvs: []
+  # This is the PriorityClass settings as defined in
+  # https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass
+  priorityClassName: ""
+  securityContext:
+    runAsUser: 0
+    privileged: false
+  resources:
+    limits:
+      memory: "512M"
+      cpu: "500m"
+    requests:
+      memory: "512M"
+      cpu: "100m"
+  service:
+    annotations: {}
+  # Only enable this if you have security enabled on your cluster
+  ingress:
+    enabled: true
+    path: "/crm"
+    annotations: {}
+    backend: {}
+    stub_backend: {}
+  deployment:
+    annotations: {}
+    affinity: {}
+    nodeSelector: {}
+    tolerations: []
+    envFrom: []
+    # - configMapRef:
+    #     name: config-secret
+    extraEnvs: []
+    # - User that the container will execute as.
+    # - Typically not necessarily unless running within environments such as OpenShift.
+minio:
+  enabled: true
+  fullnameOverride: "minio"
+  resources:
+    requests:
+      memory: 256Mi
+  replicas: 1
+  persistence:
+    enabled: true
+    size: 10Gi
+  mode: standalone
+  rootUser: root
+  rootPassword: password
+  buckets:
+    - name: paymenthub-ee
+      policy: public
+
+post_installation_job:
+  enabled: false

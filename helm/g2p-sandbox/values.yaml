@@ -183,8 +183,10 @@ ph-ee-engine:
 
   mockpayment:
     enabled: true 
+    limits:
+      memory: "768M"
     ingress:
-        enabled: true
+        enabled: false
         hosts:
           - host: ""
             paths:
@@ -194,15 +196,6 @@ ph-ee-engine:
                   name: ph-ee-connector-mock-payment-schema
                   port:
                     number: 80
-  kafka:
-    enabled: true
-    image: "spotify/kafka"
-    advertised:
-      host: "kafka"
-      port: "9092"
-    deployment:
-      annotations:
-        deployTime: "{{ .Values.deployTime }}"
 
   channel:
     enabled: true
@@ -212,7 +205,7 @@ ph-ee-engine:
     SPRING_PROFILES_ACTIVE: "bb,tenants"
     DFSPIDS: "rhino,gorilla,lion"
     operations:
-      url: "http://ops-bk.sandbox.mifos.io/api/v1"
+      url: "http://ph-ee-operations-app:80/api/v1"
       authEnabled: false
     tenantPrimary:
       clientId: "mifos"
@@ -224,13 +217,10 @@ ph-ee-engine:
       tenant: "gorilla"
     server:
       ssl:
-        keyPassword: "<replace-with-password>"
-        keyStorePassword: "<replace-with-password>"
+        keyPassword: "password"
+        keyStorePassword: "password"  
     ingress:
       enabled: false
-      annotations: 
-        kubernetes.io/ingress.class: nginx
-        nginx.ingress.kubernetes.io/backend-protocol: "HTTPS" 
       tls:
         - secretName: sandbox-secret
       hosts:
@@ -370,16 +360,12 @@ ph-ee-engine:
     image: docker.io/openmf/ph-ee-bulk-processor:latest
     tenant: "rhino,gorilla"
     hostname: bulk-connector.sandbox.mifos.io
-    aws:
-      region: "<region>"
-      access_key: "<access_key>"
-      secret_key: "<secret_key>"
     operations_app:
-      contactpoint: "https://ops-bk.sandbox.mifos.io/"
+      contactpoint: "http://ph-ee-operations-app:80"
       endpoints:
         batch_transaction: "/api/v1/batch/transactions"
     identity_account_mapper:
-      hostname: "https://identity-mapper.sandbox.mifos.io"
+      hostname: "http://ph-ee-identity-account-mapper:80"
     service:
       annotations:
         konghq.com/protocol: "https"
@@ -395,7 +381,7 @@ ph-ee-engine:
               service:
                 name: "ph-ee-connector-bulk"
                 port:
-                  number: 80
+                  number: 8443
     deployment:
       annotations:
         deployTime: "{{ .Values.deployTime }}"
@@ -463,8 +449,9 @@ ph-ee-engine:
     enabled: true
     image: docker.io/openmf/ph-ee-importer-rdbms:latest
     LOGGING_LEVEL_ROOT: "DEBUG"
+
   keycloak:
-    enabled: true
+    enabled: false
     ingress:
       enabled: false
       ingressClassName: "kong"
@@ -476,7 +463,7 @@ ph-ee-engine:
       tls: []
     
   kong:
-    enabled: true
+    enabled: false
     image:
       repository: revomatico/docker-kong-oidc
       tag: "latest"
@@ -495,9 +482,8 @@ ph-ee-engine:
   vouchers:
     enabled: true
     image: docker.io/openmf/ph-ee-vouchers:latest
-    hostname: "vouchers.sandbox.mifos.io"
     ingress:
-      enabled: true
+      enabled: false
       annotations:
         nginx.ingress.kubernetes.io/access-control-allow-origin: 'true'
         nginx.ingress.kubernetes.io/cors-allow-headers: 'x-registering-institution-id'
@@ -518,55 +504,128 @@ ph-ee-engine:
     deployment:
       annotations:
         deployTime: "{{ .Values.deployTime }}"
-
-
-
-account_mapper:
-  account_mapper:
+  integration_test:
     enabled: true
-    image: docker.io/openmf/ph-ee-identity-account-mapper:latest
-    hostname: "identity-mapper.sandbox.mifos.io"
-    LOGGING_LEVEL_ROOT: INFO    
+    gradle:
+      command: ./gradlew test -Dcucumber.filter.tags="@gov"
+
+  billPay:
+    enabled: true
+    image: docker.io/openmf/ph-ee-bill-pay:latest
+    hostname: "bill-pay.sandbox.mifos.io"
+    stub_hostname: "bill-pay.sandbox.mifos.io"
+    SPRING_PROFILES_ACTIVE: "bb,tenants"
+    DFSPIDS: "rhino,gorilla,lion"
     ingress:
-      enabled: true
-      pathtype: Prefix
-      annotations:
-        nginx.ingress.kubernetes.io/access-control-allow-origin: 'true'
-        nginx.ingress.kubernetes.io/cors-allow-headers: 'x-registering-institution-id'
-        nginx.ingress.kubernetes.io/cors-allow-methods: PUT, GET, POST, OPTIONS, DELETE
-        nginx.ingress.kubernetes.io/cors-allow-origin: '*'
-        nginx.ingress.kubernetes.io/enable-cors: 'true'
+      enabled: false
       tls:
         - secretName: sandbox-secret
       hosts:
-        - host: identity-mapper.sandbox.mifos.io
+        - host: bill-pay.sandbox.mifos.io
           paths:
-          - path: "/"
-            backend:
-              service:
-                name: "ph-ee-identity-account-mapper"
-                port:
-                  number: 80
+            - path: "/"
+              backend:
+                service:
+                  name: "ph-ee-bill-pay"
+                  port:
+                    number: 8080
     deployment:
       annotations:
         deployTime: "{{ .Values.deployTime }}"
 
-    async:
-      core_pool_size: 10
-      max_pool_size: 10
-      queue_capacity: 100
+  crm:
+    enabled: true
+    image: docker.io/openmf/ph-ee-connector-crm:latest
+    hostname: "crm.sandbox.mifos.io"
+    stub_hostname: "crm.sandbox.mifos.io"
+    SPRING_PROFILES_ACTIVE: "bb,tenants"
+    DFSPIDS: "rhino,gorilla,lion"
+    ingress:
+      enabled: false
+      tls:
+        - secretName: sandbox-secret
+      hosts:
+        - host: crm.sandbox.mifos.io
+          paths:
+            - path: "/"
+              backend:
+                service:
+                  name: "ph-ee-connector-crm"
+                  port:
+                    number: 8080
+    deployment:
+      annotations:
+        deployTime: "{{ .Values.deployTime }}"
 
-    account_validation_enabled: "false"
-    account_validator_connector: "gsma"
+  connector:
+    enabled: true
+    image: docker.io/openmf/ph-ee-connector-bulk:latest
+    aws:
+      region: "ap-south-1"
+      access_key: "aws-access-key"
+      secret_key: "aws-secret-key"
+    hostname: "connector.sandbox.mifos.io"
+    ingress:
+      enabled: true
+      annotations:
+        nginx.ingress.kubernetes.io/access-control-allow-origin: 'true'
+        nginx.ingress.kubernetes.io/cors-allow-methods: PUT, GET, POST, OPTIONS, DELETE
+        nginx.ingress.kubernetes.io/cors-allow-origin: '*'
+        nginx.ingress.kubernetes.io/enable-cors: 'true'
 
-    spring:
-      cache:
-        time_to_live: 30
-        time_to_idle: 30
-        max_entries_heap: 1000
-        max_byte_off_heap: 10
-        max_byte_disk: 10
-      datasource:
-        url: jdbc:mysql:thin://operationsmysql:3306/identity_account_mapper
-        username: mifos
-        password: password
+    deployment:
+      annotations:
+        deployTime: "{{ .Values.deployTime }}"
+
+  post_installation_job:
+    enabled: true
+  minio:
+    enabled: true
+
+account_mapper:
+  enabled: true
+  image: docker.io/openmf/ph-ee-identity-account-mapper:v1.4.0
+  hostname: "identity-mapper.sandbox.mifos.io"
+  LOGGING_LEVEL_ROOT: INFO    
+  ingress:
+    enabled: false
+    pathtype: Prefix
+    annotations:
+      nginx.ingress.kubernetes.io/access-control-allow-origin: 'true'
+      nginx.ingress.kubernetes.io/cors-allow-headers: 'x-registering-institution-id'
+      nginx.ingress.kubernetes.io/cors-allow-methods: PUT, GET, POST, OPTIONS, DELETE
+      nginx.ingress.kubernetes.io/cors-allow-origin: '*'
+      nginx.ingress.kubernetes.io/enable-cors: 'true'
+    tls:
+      - secretName: sandbox-secret
+    hosts:
+      - host: identity-mapper.sandbox.mifos.io
+        paths:
+        - path: "/"
+          backend:
+            service:
+              name: "ph-ee-identity-account-mapper"
+              port:
+                number: 80
+  deployment:
+    annotations:
+      deployTime: "{{ .Values.deployTime }}"
+  async:
+    core_pool_size: 10
+    max_pool_size: 10
+    queue_capacity: 100
+  account_validation_enabled: "false"
+  account_validator_connector: "gsma"
+  spring:
+    cache:
+      time_to_live: 30
+      time_to_idle: 30
+      max_entries_heap: 1000
+      max_byte_off_heap: 10
+      max_byte_disk: 10
+    datasource:
+      url: jdbc:mysql:thin://operationsmysql:3306/identity_account_mapper
+      username: mifos
+      password: password
+ 
+  
