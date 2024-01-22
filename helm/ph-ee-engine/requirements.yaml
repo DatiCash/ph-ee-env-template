@@ -93,8 +93,8 @@ dependencies:
     repository: "file://./zeebe-ops"
     condition: "zeebe_ops.enabled"
   - name: kafka
-    version: 1.0.0
-    repository: "file://./kafka"
+    version: 25.0.0
+    repository: "https://charts.bitnami.com/bitnami"
     condition: "kafka.enabled"
   - name: connector_bulk_closedloop
     version: 1.0.0
